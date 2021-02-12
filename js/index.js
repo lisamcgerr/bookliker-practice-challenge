@@ -1,117 +1,150 @@
-document.addEventListener("DOMContentLoaded", function() {});
-
 function main(){
-    fetchBooks()
+    fetchQuotes()
+    createFormListener()
     createLikeListener()
-    createDeleteListener()
+    deleteQuote()
 }
 
 
-function fetchBooks(){
-    fetch('http://localhost:3000/books')
+function fetchQuotes(){
+    fetch('http://localhost:3000/quotes?_embed=likes')
     .then(resp => resp.json())
-    .then(books =>{
-        console.log(books)
-        books.forEach(function(book){
-            renderBook(book)
+    .then(quotes => {
+        console.log(quotes)
+        quotes.forEach(function(quote){
+            renderQuotes(quote)
         })
     })
 }
-const div = document.querySelector('#show-panel')
- function renderBook(book) {
-     
-     let bookDiv = document.createElement('div')
-     bookDiv.dataset.id = book.id
 
-     const img = document.createElement('img')
-     img.setAttribute('src', book.img_url)
+function renderQuotes(quote){
+    const ul = document.querySelector('#quote-list')
+    
+    const li = document.createElement('li')
+    li.className = 'quote-card'
 
-     const h2 = document.createElement('h2')
-     h2.innerText = book.title
+    const blockQuote = document.createElement('blockquote')
+    blockQuote.className = 'blockquote'
 
-     const deleteBtn = document.createElement('button')
-     deleteBtn.className = 'delete-btn'
-     deleteBtn.dataset.id = book.id
-     deleteBtn.innerText = 'delete'
+    const pTag = document.createElement('p')
+    pTag.className = 'mb-0'
+    pTag.innerText = quote.quote
 
-     const h3 = document.createElement('h3')
-     h3.innerText = book.author
+    const footer = document.createElement('footer')
+    footer.className = 'blockquote-footer'
+    footer.innerText = quote.author
 
-     const h4 = document.createElement('h4')
-     h4.innerText = book.subtitle
-      
-     const pTag = document.createElement('p')
-     pTag.innerText = `${book.likes} likes`
+    const br = document.createElement('br')
 
-     const likeBtn = document.createElement('button')
-     likeBtn.className = 'like-btn'
-     likeBtn.setAttribute('id', book.id)
-     likeBtn.innerText = "like"
+    const likeBtn = document.createElement('button')
+    likeBtn.className = 'btn-success'
+    likeBtn.innerText = 'Likes: '
+    likeBtn.dataset.id = quote.id
 
-     bookDiv.append(img, h2, deleteBtn, h3, h4, likeBtn, pTag)
-     div.append(bookDiv)
+    const span = document.createElement('span')
+    span.innerText = quote.likes.length
 
- }
+    const deleteBtn = document.createElement('button')
+    deleteBtn.className = 'btn-danger'
+    deleteBtn.innerText = 'Delete'
+    deleteBtn.dataset.id = quote.id
+
+    ul.append(li)
+    li.append(blockQuote)
+    blockQuote.append(pTag, footer, br, likeBtn, deleteBtn)
+    likeBtn.append(span)
+}
 
 
-function createLikeListener(){
-    const div = document.querySelector('#show-panel')
-    div.addEventListener('click', function(e){
-        //console.log(e.target)
-        if (e.target.className === 'like-btn'){
-            likeBook(e)
+function createFormListener(){
+    const form = document.querySelector('#new-quote-form')
+    form.addEventListener('submit', function(e){
+        e.preventDefault()
+
+        const newQuote = {
+            quote: e.target.quote.value,
+            author: e.target.author.value
         }
+
+        const reqObj = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(newQuote)
+        }
+
+        fetch('http://localhost:3000/quotes?_embed=likes', reqObj)
+        .then(resp => resp.json())
+        .then(quote => {
+            e.target.reset()
+
+            const updatedQuote = {
+                ...quote,
+                likes: []
+            }
+            renderQuotes(updatedQuote)
+        })
+    })
+
+}
+
+function createLikeListener(e){
+    const quoteContainer = document.querySelector('#quote-list')
+    quoteContainer.addEventListener('click', function(e){
+        if (e.target.className === 'btn-success'){
+            likeQuote(e)
+        }
+
     })
 }
 
-function likeBook(e){
-    console.log(e.target.id)
-    const id = e.target.id
-    const pTag = e.target.nextElementSibling
-    let likes = parseInt(pTag.innerText)
+function likeQuote(e){
+    console.log(e.target)
+    const id = e.target.dataset.id
+    const span = e.target.firstElementChild
+    let likes = parseInt(span.innerText)
 
     const reqObj = {
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-            likes: likes + 1
-        })
+        body: JSON.stringify({likes: likes + 1})
     }
 
-    fetch(`http://localhost:3000/books/${id}`, reqObj)
+    fetch(`http://localhost:3000/quotes/${id}`, reqObj)
     .then(resp => resp.json())
-    .then(book =>{
-        pTag.innerText = likes + 1
+    .then(quote => {
+        span.innerText = `${likes + 1}`
     })
 
 }
 
-function createDeleteListener(){
-    const div = document.querySelector('#show-panel')
-    div.addEventListener('click', function(e){
-       // e.preventDefault()
-
-        if (e.target.className = 'delete-btn') {
-           
-            const id = e.target.dataset.id
-
-            const reqObj = {
-                method: 'DELETE'
-            }
-
-            fetch(`http://localhost:3000/books/${id}`, reqObj) 
-            .then(resp => resp.json())
-            .then(book => {
-                console.log(e.target)
-                e.target.parentNode.remove()
-
-                //the parent node of likes button is the div
-            })
+function deleteQuote(){
+    const quoteContainer = document.querySelector('#quote-list')
+    quoteContainer.addEventListener('click', function(e){
+        if (e.target.className === 'btn-danger'){
+            deleteQ(e)
         }
-    })
 
+    })
 }
+
+function deleteQ(e){
+
+    const id = e.target.dataset.id
+    const reqObj = {
+        method: 'DELETE'
+    }
+
+    fetch(`http://localhost:3000/quotes/${id}`, reqObj)
+    .then(resp => resp.json())
+    .then(quote => {
+        e.target.parentNode.parentNode.remove()
+    })
+}
+
+
 
 main()
