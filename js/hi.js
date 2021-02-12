@@ -1,112 +1,116 @@
-// grab and render all the existing animals in our rails app
-// create a new animal
-// delete
+document.addEventListener("DOMContentLoaded", function() {
+  fetchBooks()
+  likeBook()
+});
+
+const myUser = {"id":1, "username":"pouros"}
+
+function fetchBooks(){
+  fetch ("http://localhost:3000/books")
+  .then(resp => resp.json())
+  .then(books => books.forEach(function(book){
+      renderBook(book)
+  }))
+}
+
+function renderBook(book){
+  const div = document.querySelector("#list-panel")
+  const li = document.createElement("li")
+
+  li.addEventListener('click', function(event){
+      event.preventDefault
+      fetchBookDetails(event.target.dataset.id)
+  })
+  li.dataset.id = book.id
+  li.innerText = book.title
+  div.append(li)
+}
+
+function fetchBookDetails(id){
+  fetch (`http://localhost:3000/books/${id}`)
+  .then(resp => resp.json())
+  .then(book => renderBookDetails(book))
+}
+
+function renderBookDetails(book){
+  const div = document.querySelector('#show-panel')
+  const p = document.createElement("p")
+  const p2 = document.createElement("p")
+  const p3 = document.createElement("p")
+  const button = document.createElement("button")
+  const img = document.createElement("img")
+
+  div.innerHTML= (" ")
+  p.innerText = book.title
+  p2.innerText = book.author
+  p3.innerText = book.description
+  img.src = book.img_url
+  button.setAttribute('class', 'like-button')
+  button.dataset.id = book.id
+  button.innerText = "LIKE"
+  const ul = document.createElement("ul")
+  ul.id = "like-panel"
+
+
+  div.append(img, p, p2, p3, ul)
+ book.users.forEach(user => renderUserList(user))
+ div.append(button)
 
 
 
-function main(){
-    fetchAnimals()
-    createFormListener()
-    createDeleteListener()
-  }
-  
-  function createDeleteListener(){
-    const tBody = document.querySelector('tbody')
-    tBody.addEventListener('click', function(e){
-  
-      if(e.target.className === 'delete-btn') {
-  
-        const id = e.target.dataset.id
-  
-        const reqObj = {
-          method: 'DELETE'
-        }
-  
-        fetch(`http://localhost:3000/animals/${id}`, reqObj)
-        .then(resp => resp.json())
-        .then(data => {
-          e.target.parentNode.parentNode.remove()
-        })
+}
+
+function renderUserList(user){
+
+  const ul = document.querySelector('#like-panel')
+  const li = document.createElement("li")
+      li.dataset.id = user.id
+       li.innerHTML = user.username
+
+       ul.append(li)
+}
+
+function likeBook(){
+
+  const div = document.querySelector("#show-panel")
+  div.addEventListener("click", function(event){
+      event.preventDefault
+
+      if (event.target.className === "like-button"){
+          const usersList = event.target.previousElementSibling
+
+          const id = event.target.dataset.id
+
+        const children = Array.from(usersList.children)
+          const currentUsers = []
+
+         children.forEach(function(userLi){
+             const user = {id: userLi.dataset.id, username: userLi.innerText}
+             currentUsers.push(user)
+        
+          const reqObj = {
+              method: 'PATCH',
+              headers: {
+                  'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                  "users": [...currentUsers, myUser]
+                } )
+          }
+
+              fetch(`http://localhost:3000/books/${id}`, reqObj)
+              .then(resp => resp.json())
+              .then(updatedList => {
+                  const li = document.createElement("li")
+                  li.innerText = myUser.username
+                  usersList.append(li)
+                  // changeButton()
+              })
+
+
+
+          }
+
       }
-  
-    })
-  }
 
-  
-  
-  function createFormListener(){
-    const form = document.querySelector('form')
-  
-    form.addEventListener('submit', function(e){
-      e.preventDefault()
-  
-      const newAnimal = {
-        name: e.target['name'].value,
-        gender: e.target['gender'].value,
-        species: e.target['species'].value,
-      }
-  
-      form.reset()
-  
-  
-      const reqObj = {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(newAnimal)
-      }
-  
-      fetch('http://localhost:3000/animals', reqObj)
-      .then(resp => resp.json())
-      .then(animal => {
-        renderAnimal(animal)
-      })
-    })
-  }
-  
-  
-  function renderAnimal(animal){
-    const row = document.createElement('tr')
-  
-    const animalNode = document.createElement('td')
-    animalNode.innerText = animal.name
-  
-  
-    const genderNode = document.createElement('td')
-    genderNode.innerText = animal.gender
-  
-  
-    const speciesNode = document.createElement('td')
-    speciesNode.innerText = animal.species
-  
-    const deleteBtn = document.createElement('button')
-    deleteBtn.dataset.id = animal.id
-    deleteBtn.className = 'delete-btn'
-    deleteBtn.innerText = 'remove'
-  
-    speciesNode.append(deleteBtn)
-  
-  
-    row.append(animalNode, genderNode, speciesNode)
-  
-    const tBody = document.querySelector('tbody')
-    tBody.append(row)
-  }
-  
-  
-  
-  
-  function fetchAnimals(){
-    fetch('http://localhost:3000/animals')
-    .then(resp => resp.json())
-    .then(animals => {
-      animals.forEach(function(animal){
-        renderAnimal(animal)
-      })
-    })
-  }
-  
-  
-  
-  main()
+      )}
